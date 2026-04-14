@@ -75,3 +75,16 @@ gym.register(
     },
     disable_env_checker=True,
 )
+
+##
+# OpenVLA - IK-Relative with table camera
+##
+
+gym.register(
+    id="Isaac-Lift-Cube-Franka-OpenVLA-v0",
+    entry_point="isaaclab.envs:ManagerBasedRLEnv",
+    kwargs={
+        "env_cfg_entry_point": f"{__name__}.openvla_env_cfg:FrankaCubeLiftOpenVLAEnvCfg",
+    },
+    disable_env_checker=True,
+)
