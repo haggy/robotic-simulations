@@ -10,8 +10,12 @@ runner script can pass 256×256 RGB frames to OpenVLA.
 """
 
 import isaaclab.sim as sim_utils
+from isaaclab.assets import RigidObjectCfg
 from isaaclab.sensors import CameraCfg
+from isaaclab.sim.schemas.schemas_cfg import RigidBodyPropertiesCfg
+from isaaclab.sim.spawners.from_files.from_files_cfg import UsdFileCfg
 from isaaclab.utils import configclass
+from isaaclab.utils.assets import ISAAC_NUCLEUS_DIR
 
 from . import ik_rel_env_cfg
 
@@ -41,6 +45,31 @@ class FrankaCubeLiftOpenVLAEnvCfg(ik_rel_env_cfg.FrankaCubeLiftEnvCfg):
         # before the runner calls query_openvla().  Default is 0 (no re-render).
         self.num_rerenders_on_reset = 1
 
+        # Override cube with a solid red visual material so it stands out clearly
+        # against the dark background.  All physics properties (scale, rigid body
+        # solver settings, init state) are copied from joint_pos_env_cfg unchanged.
+        self.scene.object = RigidObjectCfg(
+            prim_path="{ENV_REGEX_NS}/Object",
+            init_state=RigidObjectCfg.InitialStateCfg(pos=[0.5, 0, 0.055], rot=[1, 0, 0, 0]),
+            spawn=UsdFileCfg(
+                usd_path=f"{ISAAC_NUCLEUS_DIR}/Props/Blocks/DexCube/dex_cube_instanceable.usd",
+                scale=(0.8, 0.8, 0.8),
+                rigid_props=RigidBodyPropertiesCfg(
+                    solver_position_iteration_count=16,
+                    solver_velocity_iteration_count=1,
+                    max_angular_velocity=1000.0,
+                    max_linear_velocity=1000.0,
+                    max_depenetration_velocity=5.0,
+                    disable_gravity=False,
+                ),
+                visual_material=sim_utils.PreviewSurfaceCfg(
+                    diffuse_color=(1.0, 0.0, 0.0),  # pure red
+                    roughness=0.5,
+                    metallic=0.0,
+                ),
+            ),
+        )
+
         # Replace the default bright grey dome light with a dark-background variant.
         # visible_in_primary_ray=False renders the sky as pure black, giving strong
         # contrast against the white robot arm.  A slightly cooler colour (0.6, 0.7, 1.0)
@@ -55,16 +84,19 @@ class FrankaCubeLiftOpenVLAEnvCfg(ik_rel_env_cfg.FrankaCubeLiftEnvCfg):
             ),
         )
 
-        # Fixed camera looking from in front of the robot back toward the workspace.
-        # The forward direction of this quaternion is (-0.866, 0, -0.5) — i.e. looking
-        # in the -x/world direction at ~30° below horizontal.
+        # Elevated front-left camera showing the robot face-on.
+        # The original side position (0.25, -0.65, 0.55) was rotated 45° CCW around
+        # the world Z-axis, swinging the camera toward the front of the robot so the
+        # gripper and workspace are more directly visible.
         #
-        # Position: 1.5 m in front of robot base, 0.7 m up.
-        #   - Pulled back from 1.0 m so the full arm (EE at z≈0.3-0.5) is visible.
-        #   - Raised from 0.4 m so the arm appears near the centre of the frame.
-        # FOV: horizontal_aperture 27.7 → ~60° (was 20.955 → ~47°), wider to capture
-        #   the whole workspace from cube (z≈0.05) to gripper (z≈0.5).
-        # Clipping: far plane extended to 3.0 m so nothing is culled.
+        # Position: (0.636, -0.283, 0.55)
+        #   — same radius and height as before; 45° less to the side
+        # Look-at: (0.45, 0.05, 0.15) — centre of the cube workspace area
+        #
+        # Quaternion (w,x,y,z) = (0.360, -0.898, -0.234, 0.094)
+        #   camera_z (forward) = (-0.337,  0.602, -0.724) — 46° below horizontal
+        #   camera_x (right)   = ( 0.873,  0.489,  0.000) — sweeps along world +x/+y
+        #   camera_y (img-down)= ( 0.354, -0.631, -0.690) — pointing down into scene
         self.scene.camera = CameraCfg(
             prim_path="{ENV_REGEX_NS}/table_cam",
             update_period=0.0,  # update every physics step — avoids timer-drift frame freezes
@@ -74,12 +106,12 @@ class FrankaCubeLiftOpenVLAEnvCfg(ik_rel_env_cfg.FrankaCubeLiftEnvCfg):
             spawn=sim_utils.PinholeCameraCfg(
                 focal_length=24.0,
                 focus_distance=400.0,
-                horizontal_aperture=27.7,
-                clipping_range=(0.1, 3.0),
+                horizontal_aperture=27.7,  # ~60° FOV — wide enough to capture arm + workspace
+                clipping_range=(0.05, 3.0),
             ),
             offset=CameraCfg.OffsetCfg(
-                pos=(1.5, 0.0, 0.7),
-                rot=(0.35355, -0.61237, -0.61237, 0.35355),
+                pos=(0.636, -0.283, 0.55),
+                rot=(0.35967, -0.89827, -0.23440, 0.09385),
                 convention="ros",
             ),
         )

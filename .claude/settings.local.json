@@ -14,7 +14,10 @@
       "Bash(.venv/Scripts/python.exe -c \"import inspect, rsl_rl.runners.on_policy_runner as r; print\\(inspect.getsourcefile\\(r.OnPolicyRunner\\)\\)\")",
       "Bash(.venv/Scripts/python.exe -c \"import inspect, rsl_rl.algorithms.ppo as p; sig = inspect.signature\\(p.PPO.__init__\\); print\\(list\\(sig.parameters.keys\\(\\)\\)\\)\")",
       "Bash(C:/Users/dhagm/school/me740/rproject/RoboVerse/.venv/Scripts/python.exe *)",
-      "Bash(grep -r \"timm\" C:/Users/dhagm/school/me740/rproject/RoboVerse/IsaacLab/source/*/setup.py C:/Users/dhagm/school/me740/rproject/RoboVerse/IsaacLab/source/*/pyproject.toml)"
+      "Bash(grep -r \"timm\" C:/Users/dhagm/school/me740/rproject/RoboVerse/IsaacLab/source/*/setup.py C:/Users/dhagm/school/me740/rproject/RoboVerse/IsaacLab/source/*/pyproject.toml)",
+      "Bash(ffmpeg -i \"C:/Users/dhagm/Downloads/dp-put_carrot.mp4\" -vframes 1 -q:v 2 \"C:/Users/dhagm/Downloads/dp_frame.png\" -y)",
+      "Bash(python *)",
+      "Read(//c/Users/dhagm/Downloads/**)"
     ]
   }
 }
