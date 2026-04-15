@@ -30,6 +30,10 @@ class FrankaCubeLiftOpenVLAEnvCfg(ik_rel_env_cfg.FrankaCubeLiftEnvCfg):
         # Silence observation noise during VLA inference.
         self.observations.policy.enable_corruption = False
 
+        # Disable command-pose debug visualisation — its per-step marker updates
+        # trigger repeated IMemoryBudgetManagerFactory acquisitions and spam the log.
+        self.commands.object_pose.debug_vis = False
+
         # Longer episodes to give the VLA model time to complete the task.
         self.episode_length_s = 15.0
 
@@ -44,7 +48,7 @@ class FrankaCubeLiftOpenVLAEnvCfg(ik_rel_env_cfg.FrankaCubeLiftEnvCfg):
         # visuomotor task camera and give a reasonable FoV over the workspace.
         self.scene.camera = CameraCfg(
             prim_path="{ENV_REGEX_NS}/table_cam",
-            update_period=0.0,
+            update_period=0.0,  # update every physics step — avoids timer-drift frame freezes
             height=256,
             width=256,
             data_types=["rgb"],

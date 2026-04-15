@@ -38,6 +38,13 @@ parser.add_argument(
     default="bridge_orig",
     help="OpenVLA unnormalization key (dataset statistics). Default: bridge_orig",
 )
+parser.add_argument(
+    "--action_repeat",
+    type=int,
+    default=5,
+    help="Repeat each OpenVLA action for this many env steps before querying again (default: 5). "
+         "Reduces inference load: at 50 Hz policy rate, repeat=5 → ~10 Hz effective VLA rate.",
+)
 AppLauncher.add_app_launcher_args(parser)
 args_cli = parser.parse_args()
 
@@ -83,18 +90,9 @@ def load_openvla(device: str = "cuda:0"):
     return model, processor
 
 
-_WARMUP_STEPS = 5  # zero-action steps after every reset before querying OpenVLA
-
 # Maximum delta translation (m) and rotation (rad) per step — clamps runaway actions.
 _MAX_TRANS = 0.05  # 5 cm
 _MAX_ROT = 0.2     # ~11 deg
-
-
-def warmup(env: ManagerBasedRLEnv) -> None:
-    """Step the env with zero actions to let the camera renderer populate its buffers."""
-    zero = torch.zeros(env.num_envs, 7, device=env.device)
-    for _ in range(_WARMUP_STEPS):
-        env.step(zero)
 
 
 @torch.inference_mode()
@@ -131,14 +129,39 @@ def query_openvla(
     if rgb_np.dtype != np.uint8:
         # float32 / float16 — scale to [0, 255] uint8 for PIL
         rgb_np = (rgb_np.clip(0.0, 1.0) * 255.0).astype(np.uint8)
+
+    # Diagnostic: print image stats so we can tell if the camera is frozen.
+    # A frozen camera will show constant mean/std across queries.
+    if not hasattr(query_openvla, "_frame_count"):
+        query_openvla._frame_count = 0
+    query_openvla._frame_count += 1
+    if query_openvla._frame_count <= 3 or query_openvla._frame_count % 20 == 0:
+        print(
+            f"  [camera] frame={query_openvla._frame_count:4d} "
+            f"mean={rgb_np.mean():.1f}  std={rgb_np.std():.2f}  "
+            f"min={int(rgb_np.min())}  max={int(rgb_np.max())}"
+        )
+    # Save the first frame to disk so you can inspect what OpenVLA is seeing.
+    if query_openvla._frame_count == 1:
+        save_path = "openvla_frame_0.png"
+        Image.fromarray(rgb_np).save(save_path)
+        print(f"  [camera] Saved first frame → {save_path}")
+
     pil_img = Image.fromarray(rgb_np).resize((256, 256))
 
     # 2. Run OpenVLA inference.
     # Processor signature: __call__(text, images, ...) — text comes first.
+    # Only pixel_values should be bfloat16; input_ids / attention_mask must stay as Long.
     device = next(model.parameters()).device
-    inputs = processor(instruction, pil_img, return_tensors="pt").to(device, dtype=torch.bfloat16)
+    inputs = processor(instruction, pil_img, return_tensors="pt").to(device)
+    inputs["pixel_values"] = inputs["pixel_values"].to(dtype=torch.bfloat16)
     raw_action = model.predict_action(**inputs, unnorm_key=unnorm_key, do_sample=False)
     # raw_action: np.ndarray (7,) — [dx, dy, dz, droll, dpitch, dyaw, gripper]
+
+    # Free temporary inference tensors from the CUDA allocator cache so that
+    # the RTX renderer in the next env.step() isn't starved of VRAM.
+    del inputs
+    torch.cuda.empty_cache()
 
     # 3. Package into IsaacLab action tensor (num_envs, 7).
     #    Clamp translations and rotations to prevent the physics from going unstable.
@@ -153,7 +176,7 @@ def query_openvla(
     gripper_val = 1.0 if raw_action[6] > 0.0 else 0.0
     gripper = torch.full((env.num_envs, 1), gripper_val, dtype=torch.float32, device=env.device)
 
-    return torch.cat([arm, gripper], dim=-1)  # (N, 7)
+    return torch.cat([arm, gripper], dim=-1), raw_action  # (N, 7), (7,)
 
 
 # ── Main ───────────────────────────────────────────────────────────────────────
@@ -168,12 +191,10 @@ def main() -> None:
 
     env = ManagerBasedRLEnv(cfg=cfg)
 
-    print("[Runner] Initialising environment (reset + camera warm-up) …")
+    print("[Runner] Initialising environment …")
     obs, _ = env.reset()
-    # Warm up: step with zero actions so the camera renderer fully populates its
-    # buffer (num_rerenders_on_reset=1 handles reset frames; these cover the
-    # first few post-reset physics steps).
-    warmup(env)
+    # num_rerenders_on_reset=1 (set in openvla_env_cfg) ensures the camera
+    # buffer is populated during reset — no manual warmup steps needed.
     print("[Runner] Environment ready.")
 
     # ── Step 2: load OpenVLA into whatever VRAM remains ───────────────────────
@@ -181,33 +202,54 @@ def main() -> None:
 
     instruction = "lift the cube"
     print(f'\n[Runner] Instruction: "{instruction}"')
-    print(f"[Runner] Running for {args_cli.num_steps} steps …\n")
+    print(f"[Runner] Running for {args_cli.num_steps} steps "
+          f"(action_repeat={args_cli.action_repeat}) …\n")
+
+    print(f"[Runner] Env action space: {env.action_space}")
+    print(f"[Runner] Action manager total dim: {env.action_manager.total_action_dim}\n")
 
     episode_count = 0
     episode_reward = 0.0
+    cached_action: torch.Tensor | None = None  # scaled delta, applied every step
+    last_raw: np.ndarray | None = None
 
     for step in range(args_cli.num_steps):
-        # Query OpenVLA for the current observation.
-        action = query_openvla(
-            env, model, processor,
-            instruction=instruction,
-            unnorm_key=args_cli.unnorm_key,
-        )
+        # Query OpenVLA every action_repeat steps.
+        # The arm delta is divided by action_repeat so that applying the same action
+        # for action_repeat consecutive steps totals exactly one full VLA delta —
+        # no accumulation, no hold-then-cancel.
+        if cached_action is None or step % args_cli.action_repeat == 0:
+            delta_action, last_raw = query_openvla(
+                env, model, processor,
+                instruction=instruction,
+                unnorm_key=args_cli.unnorm_key,
+            )
+            # Scale arm (6D) down; gripper (1D) is binary so leave it unscaled.
+            delta_action = delta_action.clone()
+            delta_action[:, :6] /= args_cli.action_repeat
+            cached_action = delta_action
 
-        obs, reward, terminated, truncated, info = env.step(action)
+        obs, reward, terminated, truncated, info = env.step(cached_action)
 
         episode_reward += reward[0].item()
 
         if step % 50 == 0:
-            print(f"  step {step:5d} | reward {reward[0].item():+.4f} | episode_return {episode_reward:.3f}")
+            np.set_printoptions(precision=4, suppress=True)
+            # Read EE world position for unambiguous movement confirmation.
+            ee_pos = env.scene["ee_frame"].data.target_pos_w[0, 0].cpu().numpy()  # (3,)
+            print(
+                f"  step {step:5d} | reward {reward[0].item():+.4f} | "
+                f"ee_pos={ee_pos} | raw_action={last_raw}"
+            )
 
         done = terminated | truncated  # (N,)
         if done.any():
             episode_count += 1
             print(f"  [Episode {episode_count} done] return = {episode_reward:.3f}")
             episode_reward = 0.0
+            cached_action = None   # force a fresh query at the start of the new episode
+            last_raw = None
             obs, _ = env.reset()
-            warmup(env)  # re-warm camera after each reset
 
             if args_cli.num_episodes > 0 and episode_count >= args_cli.num_episodes:
                 print(f"[Runner] Reached {args_cli.num_episodes} episodes. Stopping.")

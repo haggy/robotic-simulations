@@ -1,50 +1,20 @@
 [OpenVLA] Model ready.
 
 [Runner] Instruction: "lift the cube"
-[Runner] Running for 500 steps …
+[Runner] Running for 500 steps (action_repeat=5) …
 
-C:\Users\dhagm\school\me740\rproject\RoboVerse\IsaacLab\scripts\openvla\run_lift_openvla.py:134: DeprecationWarning: 'mode' parameter is deprecated and will be removed in Pillow 13 (2026-10-15)
-  pil_img = Image.fromarray(rgb_np, mode="RGB").resize((256, 256))
-Traceback (most recent call last):
-  File "C:\Users\dhagm\school\me740\rproject\RoboVerse\IsaacLab\scripts\openvla\run_lift_openvla.py", line 220, in <module>
-    main()
-  File "C:\Users\dhagm\school\me740\rproject\RoboVerse\IsaacLab\scripts\openvla\run_lift_openvla.py", line 190, in main
-    action = query_openvla(
-             ^^^^^^^^^^^^^^
-  File "C:\Users\dhagm\school\me740\rproject\RoboVerse\.venv\Lib\site-packages\torch\utils\_contextlib.py", line 116, in decorate_context
-    return func(*args, **kwargs)
-           ^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\dhagm\school\me740\rproject\RoboVerse\IsaacLab\scripts\openvla\run_lift_openvla.py", line 138, in query_openvla
-    inputs = processor(pil_img, instruction, return_tensors="pt").to(device, dtype=torch.bfloat16)
-             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\dhagm\.cache\huggingface\modules\transformers_modules\openvla\openvla_hyphen_7b\47a0ec7fc4ec123775a391911046cf33cf9ed83f\processing_prismatic.py", line 212, 
-in __call__
-    pixel_values = self.image_processor(images, return_tensors=return_tensors)["pixel_values"]
-                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\dhagm\.cache\huggingface\modules\transformers_modules\openvla\openvla_hyphen_7b\47a0ec7fc4ec123775a391911046cf33cf9ed83f\processing_prismatic.py", line 173, 
-in __call__
-    return self.preprocess(images, **kwargs)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\dhagm\.cache\huggingface\modules\transformers_modules\openvla\openvla_hyphen_7b\47a0ec7fc4ec123775a391911046cf33cf9ed83f\processing_prismatic.py", line 167, 
-in preprocess
-    pixel_values = torch.stack([self.apply_transform(img.convert("RGB")) for img in images])
-                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\dhagm\.cache\huggingface\modules\transformers_modules\openvla\openvla_hyphen_7b\47a0ec7fc4ec123775a391911046cf33cf9ed83f\processing_prismatic.py", line 167, 
-in <listcomp>
-    pixel_values = torch.stack([self.apply_transform(img.convert("RGB")) for img in images])
-                                                     ^^^^^^^^^^^
-AttributeError: 'str' object has no attribute 'convert'
+[Runner] Env action space: Box(-inf, inf, (1, 7), float32)
+[Runner] Action manager total dim: 7
 
-Windows fatal exception: access violation
-
-Current thread 0x00012ccc (most recent call first):
-  <no Python frame>
-2026-04-14T23:15:47Z [0ms] [Warning] [carb.crashreporter-breakpad.plugin] [crash] A crash has occurred.  If a debugger should be attached, please set the '/crashreporter/debuggerAttachTimeoutMs' setting to a timeout in milliseconds.  This can be used to allow the crash reporter to wait for up to that long for a debugger to attach before processing or sending the crash report.
-2026-04-14T23:15:47Z [63ms] [Warning] [carb.crashreporter-breakpad.plugin] Launched process 'py-spy.exe' as PID 75664
-2026-04-14T23:15:47Z [82ms] [Error] [carb.crashreporter-breakpad.plugin] 'py-spy.exe' exited with code 1
-
-2026-04-14T23:15:47Z [118ms] [Warning] [carb.crashreporter-breakpad.plugin] Launched process 'crashreport.gui.exe' as PID 19324
-2026-04-14T23:15:47Z [162ms] [Error] [carb.crashreporter-breakpad.plugin] 'crashreport.gui.exe' exited with code 2
-
-2026-04-14T23:15:47Z [173ms] [Error] [carb.crashreporter-breakpad.plugin] [crash] Wrote dump file 'c:/users/dhagm/school/me740/rproject/roboverse/.venv/lib/site-packages/isaacsim/kit/data/Kit/Isaac-Sim/5.1\0480ad30-395b-4177-b43d-3d88976120e2.dmp'
-2026-04-14T23:15:47Z [174ms] [Warning] [carb.crashreporter-breakpad.plugin] [crash] preventing upload of minidump due to user opt-out: 'c:/users/dhagm/school/me740/rproject/roboverse/.venv/lib/site-packages/isaacsim/kit/data/Kit/Isaac-Sim/5.1\0480ad30-395b-4177-b43d-3d88976120e2.dmp'
+  [camera] frame=   1 mean=149.0  std=61.19  min=6  max=247
+  [camera] Saved first frame → openvla_frame_0.png
+  step     0 | reward +0.3528 | ee_pos=[ 0.4633 -0.      0.3855] | raw_action=[-0.0002 -0.0004  0.007   0.0005 -0.0075 -0.0017  0.    ]
+  [camera] frame=   2 mean=149.0  std=60.92  min=5  max=250
+  [camera] frame=   3 mean=149.2  std=60.67  min=5  max=250
+2026-04-15T01:26:17Z [134,028ms] [Warning] [carb] Client gpu.foundation.plugin has acquired [gpu::unstable::IMemoryBudgetManagerFactory v0.1] 100 times. Consider accessing this interface with carb::getCachedInterface() (Performance warning)
+  step    50 | reward +0.0000 | ee_pos=[ 0.4638 -0.0002  0.389 ] | raw_action=[-0.0002 -0.0004  0.007   0.0005 -0.0075 -0.0017  0.    ]
+  [camera] frame=  20 mean=149.9  std=59.98  min=5  max=252
+  step   100 | reward +0.0000 | ee_pos=[ 0.4642 -0.0004  0.3925] | raw_action=[-0.0002 -0.0004  0.007   0.0005 -0.0075 -0.0017  0.    ]
+  step   150 | reward +0.0000 | ee_pos=[ 0.4647 -0.0006  0.396 ] | raw_action=[-0.0002 -0.0004  0.007   0.0005 -0.0075 -0.0017  0.    ]
+  [camera] frame=  40 mean=150.2  std=59.73  min=3  max=253
+  step   200 | reward +0.0000 | ee_pos=[ 0.4652 -0.0008  0.3996] | raw_action=[-0.0002 -0.0004  0.007   0.0005 -0.0075 -0.0017  0.    ]
