@@ -52,6 +52,7 @@ app_launcher = AppLauncher(args_cli)
 simulation_app = app_launcher.app
 
 # ── Safe to import Isaac Sim / IsaacLab now ────────────────────────────────────
+import gc
 import torch
 from PIL import Image
 
@@ -158,9 +159,13 @@ def query_openvla(
     raw_action = model.predict_action(**inputs, unnorm_key=unnorm_key, do_sample=False)
     # raw_action: np.ndarray (7,) — [dx, dy, dz, droll, dpitch, dyaw, gripper]
 
-    # Free temporary inference tensors from the CUDA allocator cache so that
-    # the RTX renderer in the next env.step() isn't starved of VRAM.
+    # Free temporary inference tensors before env.step() needs VRAM for RTX rendering.
+    # Sequence matters: delete Python refs → collect Python GC → synchronize GPU →
+    # then flush the CUDA allocator cache.  Skipping synchronize() means the cache
+    # flush can race with still-running CUDA kernels and leave memory pinned.
     del inputs
+    gc.collect()
+    torch.cuda.synchronize()
     torch.cuda.empty_cache()
 
     # 3. Package into IsaacLab action tensor (num_envs, 7).

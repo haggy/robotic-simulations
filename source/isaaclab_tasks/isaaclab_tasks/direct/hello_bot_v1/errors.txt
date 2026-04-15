@@ -6,15 +6,10 @@
 [Runner] Env action space: Box(-inf, inf, (1, 7), float32)
 [Runner] Action manager total dim: 7
 
-  [camera] frame=   1 mean=149.0  std=61.19  min=6  max=247
+  [camera] frame=   1 mean=39.0  std=48.34  min=0  max=242
   [camera] Saved first frame → openvla_frame_0.png
-  step     0 | reward +0.3528 | ee_pos=[ 0.4633 -0.      0.3855] | raw_action=[-0.0002 -0.0004  0.007   0.0005 -0.0075 -0.0017  0.    ]
-  [camera] frame=   2 mean=149.0  std=60.92  min=5  max=250
-  [camera] frame=   3 mean=149.2  std=60.67  min=5  max=250
-2026-04-15T01:26:17Z [134,028ms] [Warning] [carb] Client gpu.foundation.plugin has acquired [gpu::unstable::IMemoryBudgetManagerFactory v0.1] 100 times. Consider accessing this interface with carb::getCachedInterface() (Performance warning)
-  step    50 | reward +0.0000 | ee_pos=[ 0.4638 -0.0002  0.389 ] | raw_action=[-0.0002 -0.0004  0.007   0.0005 -0.0075 -0.0017  0.    ]
-  [camera] frame=  20 mean=149.9  std=59.98  min=5  max=252
-  step   100 | reward +0.0000 | ee_pos=[ 0.4642 -0.0004  0.3925] | raw_action=[-0.0002 -0.0004  0.007   0.0005 -0.0075 -0.0017  0.    ]
-  step   150 | reward +0.0000 | ee_pos=[ 0.4647 -0.0006  0.396 ] | raw_action=[-0.0002 -0.0004  0.007   0.0005 -0.0075 -0.0017  0.    ]
-  [camera] frame=  40 mean=150.2  std=59.73  min=3  max=253
-  step   200 | reward +0.0000 | ee_pos=[ 0.4652 -0.0008  0.3996] | raw_action=[-0.0002 -0.0004  0.007   0.0005 -0.0075 -0.0017  0.    ]
+  step     0 | reward +0.3527 | ee_pos=[0.4632 0.0001 0.3855] | raw_action=[-0.0231  0.0006 -0.0066  0.1187 -0.0333  0.0058  0.    ]
+  [camera] frame=   2 mean=39.1  std=48.44  min=0  max=242
+  [camera] frame=   3 mean=39.3  std=48.57  min=0  max=242
+2026-04-15T02:05:26Z [176,797ms] [Warning] [carb] Client gpu.foundation.plugin has acquired [gpu::unstable::IMemoryBudgetManagerFactory v0.1] 100 times. Consider accessing this interface with carb::getCachedInterface() (Performance warning)
+  step    50 | reward +0.0000 | ee_pos=[0.4547 0.0095 0.3832] | raw_action=[-0.0231  0.0006 -0.0066  0.1187 -0.0333  0.0058  0.    ]
