@@ -205,7 +205,7 @@ def main() -> None:
     # ── Step 2: load OpenVLA into whatever VRAM remains ───────────────────────
     model, processor = load_openvla(device="cuda:0")
 
-    instruction = "pick up the red cube"
+    instruction = "pick up the red object"
     print(f'\n[Runner] Instruction: "{instruction}"')
     print(f"[Runner] Running for {args_cli.num_steps} steps "
           f"(action_repeat={args_cli.action_repeat}) …\n")
