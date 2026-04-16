@@ -233,7 +233,7 @@ def main() -> None:
     # ── Step 2: load OpenVLA into whatever VRAM remains ───────────────────────
     model, processor = load_openvla(device="cuda:0")
 
-    instruction = "pick up the red object"
+    instruction = "place the red cube on other side of table"
     print(f'\n[Runner] Instruction: "{instruction}"')
     sampling_mode = f"temperature={args_cli.temperature}" if args_cli.temperature > 0.0 else "greedy"
     print(f"[Runner] Running for {args_cli.num_steps} steps "

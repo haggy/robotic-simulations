@@ -375,6 +375,128 @@ def openvla_step(env, model, processor, instruction, unnorm_key="bridge_orig"):
 
 ---
 
+## OpenVLA-OFT Expertise
+
+### What is OpenVLA-OFT
+OpenVLA-OFT (paper: arXiv:2502.19645, repo: `github.com/moojink/openvla-oft`) is a fine-tuning recipe on top of the base OpenVLA-7B model. It replaces the tokenized discrete-action decoder with a continuous MLP action head trained with an L1 regression loss, and adds **action chunking** (predicting a sequence of future actions per inference call instead of one step at a time). The result is **26× faster action generation** and **3× lower latency** than base OpenVLA.
+
+### Key Differences from Base OpenVLA
+
+| Aspect | Base OpenVLA | OpenVLA-OFT |
+|--------|-------------|-------------|
+| Action output | Discrete tokens → 7-DoF delta (1 step) | Continuous MLP head → action chunk (N steps) |
+| Objective | Cross-entropy on action tokens | L1 regression |
+| Inference call | `model.predict_action(...)` → `np.ndarray (7,)` | `get_vla_action(...)` → action queue / deque |
+| Gripper convention | `> 0` = open | `normalize_gripper_action` maps [0,1]→[-1,+1]; then `invert_gripper_action` flips sign for OpenVLA-family models |
+| Proprioception | Not used | Optional: 8-D state `[eef_pos(3), eef_axis_angle(3), gripper_qpos(1) ×2]` via `proprio_projector` |
+| Multi-image | Single camera | Configurable: `num_images_in_input = 2` (e.g. `full_image` + `wrist_image`) |
+| Language grounding | Standard | OFT+ variant adds FiLM conditioning for high-frequency language-driven control |
+
+### OFT+ Variant
+`OpenVLA-OFT+` augments the base recipe with **FiLM (Feature-wise Linear Modulation)** layers for stronger language grounding. Recommended for bimanual or language-conditioned tasks (e.g. ALOHA).
+
+### Model IDs (HuggingFace)
+- Base fine-tuned on LIBERO-Spatial: `moojink/openvla-7b-oft-finetuned-libero-spatial`
+- Search HuggingFace under `moojink/openvla-7b-oft-*` for other task variants.
+
+### Loading & Inference API
+
+```python
+# OFT uses helper functions from the repo — not a drop-in AutoModelForVision2Seq call.
+# Clone https://github.com/moojink/openvla-oft and run from its root.
+
+from experiments.robot.libero.run_libero_eval import GenerateConfig
+from experiments.robot.robot_utils import (
+    get_vla,
+    get_processor,
+    get_action_head,
+    get_proprio_projector,
+    get_vla_action,
+    get_image_resize_size,
+)
+from collections import deque
+
+cfg = GenerateConfig(
+    pretrained_checkpoint="moojink/openvla-7b-oft-finetuned-libero-spatial",
+    unnorm_key="libero_spatial_no_noops",
+    use_l1_regression=True,
+    use_diffusion=False,
+    use_film=False,          # True for OFT+
+    num_open_loop_steps=8,   # chunk size: 8 for LIBERO, 25 for ALOHA
+    center_crop=True,
+)
+
+vla = get_vla(cfg)
+processor = get_processor(cfg)
+action_head = get_action_head(cfg, llm_dim=vla.llm_dim)
+proprio_projector = get_proprio_projector(cfg, llm_dim=vla.llm_dim, proprio_dim=8)  # or None
+
+# Verify unnorm_key is present
+assert cfg.unnorm_key in vla.norm_stats, f"Key not found: {cfg.unnorm_key}"
+```
+
+### Inference Loop with Action Chunking
+
+```python
+from collections import deque
+import numpy as np
+from PIL import Image
+
+resize_size = get_image_resize_size(cfg)  # e.g. (224, 224) for SigLIP backbone
+
+action_queue = deque(maxlen=cfg.num_open_loop_steps)
+
+for step in range(MAX_STEPS):
+    if len(action_queue) == 0:
+        # Build observation dict
+        obs = {
+            "full_image": np.array(pil_img.resize(resize_size)),  # (H, W, 3) uint8
+            # "wrist_image": ...,                # optional second camera
+            # "state": np.concatenate([eef_pos, eef_axis_angle, gripper_qpos]),  # (8,) or (9,)
+            "task_description": "pick up the red block",
+        }
+        # Returns a chunk of actions; each action is (7,) numpy
+        actions = get_vla_action(
+            cfg, vla, processor, obs,
+            obs["task_description"],
+            action_head, proprio_projector,
+        )
+        action_queue.extend(actions)
+
+    action = action_queue.popleft()  # (7,) — [dx, dy, dz, droll, dpitch, dyaw, gripper]
+    env.step(action)
+```
+
+### Adapting OFT to IsaacLab
+1. **Camera**: Extract `rgb[0, ..., :3]` from `CameraCfg`, convert to PIL, resize to `get_image_resize_size(cfg)` (typically 224×224 for SigLIP).
+2. **Action space**: Still uses IK-relative (`ik_rel_env_cfg`) — the delta EE convention is the same as base OpenVLA.
+3. **Chunking**: Deque of `num_open_loop_steps` actions replaces the `action_repeat` pattern used with base OpenVLA. Requery when deque is empty.
+4. **Gripper**: OFT's gripper output goes through `normalize_gripper_action` + `invert_gripper_action` — the final value is still thresholded to binary open/close for `BinaryJointPositionActionCfg`.
+5. **unnorm_key**: Must exist in `vla.norm_stats`. Use `"libero_spatial_no_noops"` for LIBERO-Spatial checkpoint; retraining with a custom dataset requires a matching key.
+6. **Proprioception** (optional): Concatenate `[eef_pos(3), eef_axis_angle(3), gripper_qpos(2)]` from `env.scene["ee_frame"]` and robot joint state, pass as `obs["state"]`.
+
+### Performance Benchmarks
+- **LIBERO**: 97.1% average success across 4 task suites — outperforms π0, MDT, Seer, DiT Policy, Octo, Diffusion Policy.
+- **ALOHA**: Strongest language grounding vs. RDT-1B and π0 on dexterous bimanual tasks.
+
+### Hardware Requirements
+| Phase | VRAM |
+|-------|------|
+| Inference (single image) | ~15.9 GB |
+| Inference (ALOHA 3-cam) | ~18.0 GB |
+| Training (LIBERO single-image) | 25.6 GB |
+| Training (ALOHA) | 38.6 GB |
+
+Recommended training: 8× A100/H100 (80 GB), 50K–150K gradient steps, LoRA fine-tuning (no model sharding needed).
+
+### Common OFT Pitfalls
+- `unnorm_key` must exactly match a key in `vla.norm_stats`; mismatch raises `AssertionError` at load time. Try `"{task_suite}_no_noops"` variant if the plain name is missing.
+- `num_open_loop_steps` must match `NUM_ACTIONS_CHUNK` from the prismatic constants baked into the checkpoint, or you'll get a mismatch warning and incorrect chunk slicing.
+- Gripper requires both `normalize_gripper_action` AND `invert_gripper_action` (for OpenVLA-family models); skipping either step produces inverted or out-of-range gripper commands.
+- OFT does NOT use `model.predict_action()` — that's the base OpenVLA tokenized path. Use `get_vla_action()` from `robot_utils`.
+
+---
+
 ## This Project's Conventions
 - **Reference task**: `source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/lift/`
 - **Pattern**: Manager-based (`ManagerBasedRLEnvCfg`) with separate `mdp/` folder for custom term functions

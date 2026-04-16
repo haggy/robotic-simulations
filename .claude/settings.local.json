@@ -19,7 +19,8 @@
       "Bash(python *)",
       "Read(//c/Users/dhagm/Downloads/**)",
       "Bash(gh issue *)",
-      "WebFetch(domain:github.com)"
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:openvla-oft.github.io)"
     ]
   }
 }
