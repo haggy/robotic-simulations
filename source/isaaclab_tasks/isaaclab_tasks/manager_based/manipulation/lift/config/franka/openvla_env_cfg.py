@@ -93,20 +93,15 @@ class FrankaCubeLiftOpenVLAEnvCfg(ik_rel_env_cfg.FrankaCubeLiftEnvCfg):
             ),
         )
 
-        # Elevated front-left camera showing the robot face-on.
-        # The original side position (0.25, -0.65, 0.55) was rotated 45° CCW around
-        # the world Z-axis, then pulled 20% further (to 0.673, -0.350, 0.630), then
-        # pulled another 20% further to capture more of the workspace.
+        # Camera rotated 45° CCW around world Z from the previous front-left position,
+        # then pulled 20% further back along the same sight line.
         #
         # Look-at: (0.45, 0.05, 0.15) — centre of the cube workspace area
-        # Position: (0.718, -0.430, 0.726) — 1.2× the previous cam→look-at vector
-        #   same direction as before, 20% further back
+        # Position: (1.085, -0.130, 0.841) — 1.2× the (0.979, -0.100, 0.726)
+        #   cam→look-at vector; same direction, 20% further back
         #
         # Quaternion unchanged (same viewing direction):
-        # (w,x,y,z) = (0.360, -0.898, -0.234, 0.094)
-        #   camera_z (forward) = (-0.337,  0.602, -0.724) — 46° below horizontal
-        #   camera_x (right)   = ( 0.873,  0.489,  0.000)
-        #   camera_y (img-down)= ( 0.354, -0.631, -0.690)
+        # (w,x,y,z) = (0.29641, -0.74018, -0.56046, 0.22439)
         self.scene.camera = CameraCfg(
             prim_path="{ENV_REGEX_NS}/table_cam",
             update_period=0.0,  # update every physics step — avoids timer-drift frame freezes
@@ -120,8 +115,8 @@ class FrankaCubeLiftOpenVLAEnvCfg(ik_rel_env_cfg.FrankaCubeLiftEnvCfg):
                 clipping_range=(0.05, 3.0),
             ),
             offset=CameraCfg.OffsetCfg(
-                pos=(0.718, -0.430, 0.726),
-                rot=(0.35967, -0.89827, -0.23440, 0.09385),
+                pos=(1.085, -0.130, 0.841),
+                rot=(0.29641, -0.74018, -0.56046, 0.22439),
                 convention="ros",
             ),
         )

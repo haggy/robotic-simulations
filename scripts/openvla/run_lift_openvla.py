@@ -163,11 +163,8 @@ def query_openvla(
         f"mean={rgb_np.mean():.2f}  std={rgb_np.std():.2f}  "
         f"min={int(rgb_np.min())}  max={int(rgb_np.max())}"
     )
-    # Save the first frame to disk so you can inspect what OpenVLA is seeing.
-    if query_openvla._frame_count == 1:
-        save_path = "openvla_frame_0.png"
-        Image.fromarray(rgb_np).save(save_path)
-        print(f"  [camera] Saved first frame → {save_path}")
+    # Overwrite openvla_frame_0.png on every query so the IDE shows a live view.
+    Image.fromarray(rgb_np).save("openvla_frame_0.png")
 
     pil_img = Image.fromarray(rgb_np).resize((256, 256))
 
