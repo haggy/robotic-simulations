@@ -238,7 +238,7 @@ def main() -> None:
 
         episode_reward += reward[0].item()
 
-        if step % 50 == 0:
+        if cached_action is None or step % args_cli.action_repeat == 0:
             np.set_printoptions(precision=4, suppress=True)
             # Read EE world position for unambiguous movement confirmation.
             ee_pos = env.scene["ee_frame"].data.target_pos_w[0, 0].cpu().numpy()  # (3,)

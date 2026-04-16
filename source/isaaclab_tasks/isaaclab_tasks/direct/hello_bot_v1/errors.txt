@@ -1,15 +1,67 @@
-[OpenVLA] Model ready.
+[INFO]: Time taken for simulation start : 3.185688 seconds
+Traceback (most recent call last):
+  File "C:\Users\dhagm\school\me740\rproject\RoboVerse\IsaacLab\scripts\openvla\run_lift_openvla.py", line 297, in <module>
+    main()
+  File "C:\Users\dhagm\school\me740\rproject\RoboVerse\IsaacLab\scripts\openvla\run_lift_openvla.py", line 204, in main
+    env = ManagerBasedRLEnv(cfg=cfg)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "c:/users/dhagm/school/me740/rproject/roboverse/isaaclab/source/isaaclab/isaaclab/envs/manager_based_rl_env.py", line 80, in __init__
+    super().__init__(cfg=cfg)
+  File "c:/users/dhagm/school/me740/rproject/roboverse/isaaclab/source/isaaclab/isaaclab/envs/manager_based_env.py", line 173, in __init__
+    self.sim.reset()
+  File "c:/users/dhagm/school/me740/rproject/roboverse/isaaclab/source/isaaclab/isaaclab/sim/simulation_context.py", line 530, in reset
+    self.render()
+  File "c:/users/dhagm/school/me740/rproject/roboverse/isaaclab/source/isaaclab/isaaclab/sim/simulation_context.py", line 601, in render
+    raise exception_to_raise
+  File "c:/users/dhagm/school/me740/rproject/roboverse/isaaclab/source/isaaclab/isaaclab/sensors/sensor_base.py", line 303, in _initialize_callback
+    self._initialize_impl()
+  File "c:/users/dhagm/school/me740/rproject/roboverse/isaaclab/source/isaaclab/isaaclab/sensors/camera/camera.py", line 488, in _initialize_impl
+    rep_annotator.attach(render_prod_path)
+  File "c:/users/dhagm/school/me740/rproject/roboverse/.venv/lib/site-packages/isaacsim/extscache/omni.replicator.core-1.12.27+107.3.3.wx64.r.cp311/omni/replicator/core/scripts/annotators.py", line 682, in attach
+    activated_result = sdg_iface.activate_node_template(
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "c:/users/dhagm/school/me740/rproject/roboverse/.venv/lib/site-packages/isaacsim/extscache/omni.syntheticdata-0.6.13+69cbf6ad.wx64.r.cp311/omni/syntheticdata/scripts/SyntheticData.py", line 1607, in activate_node_template
+    self._activate_node_rec(template_name, render_product_path_index, render_product_paths, render_var_activations)
+  File "c:/users/dhagm/school/me740/rproject/roboverse/.venv/lib/site-packages/isaacsim/extscache/omni.syntheticdata-0.6.13+69cbf6ad.wx64.r.cp311/omni/syntheticdata/scripts/SyntheticData.py", line 1408, in _activate_node_rec
+    SyntheticData._connect_nodes(connNode, node, connMap, True)
+  File "c:/users/dhagm/school/me740/rproject/roboverse/.venv/lib/site-packages/isaacsim/extscache/omni.syntheticdata-0.6.13+69cbf6ad.wx64.r.cp311/omni/syntheticdata/scripts/SyntheticData.py", line 1104, in _connect_nodes
+    success = (SyntheticData._add_node_downstream_intergraph_dependency(srcNode, dstNode.get_handle()) > 0)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "c:/users/dhagm/school/me740/rproject/roboverse/.venv/lib/site-packages/isaacsim/extscache/omni.syntheticdata-0.6.13+69cbf6ad.wx64.r.cp311/omni/syntheticdata/scripts/SyntheticData.py", line 1070, in _add_node_downstream_intergraph_dependency
+    dep_attrib_data.set(dep_data)
+TypeError: Unable to write from unknown dtype, kind=f, size=0
+2026-04-15T23:54:57Z [36,489ms] [Warning] [omni.graph.core.plugin] Could not find category 'Replicator:Annotators' for removal
+2026-04-15T23:54:57Z [36,490ms] [Warning] [omni.graph.core.plugin] Could not find category 'Replicator:Annotators' for removal
+2026-04-15T23:54:57Z [36,490ms] [Warning] [omni.graph.core.plugin] Could not find category 'Replicator' for removal
+2026-04-15T23:54:57Z [36,490ms] [Warning] [omni.graph.core.plugin] Could not find category 'Replicator:Annotators' for removal
+2026-04-15T23:54:57Z [36,490ms] [Warning] [omni.graph.core.plugin] Could not find category 'Replicator:Annotators' for removal
+2026-04-15T23:54:57Z [36,491ms] [Warning] [omni.graph.core.plugin] Could not find category 'Replicator:Annotators' for removal
+2026-04-15T23:54:57Z [36,491ms] [Warning] [omni.graph.core.plugin] Could not find category 'Replicator:Annotators' for removal
+2026-04-15T23:54:57Z [36,491ms] [Warning] [omni.graph.core.plugin] Could not find category 'Replicator:Annotators' for removal
+2026-04-15T23:54:57Z [36,491ms] [Warning] [omni.graph.core.plugin] Could not find category 'Replicator:Annotators' for removal
+2026-04-15T23:54:57Z [36,491ms] [Warning] [omni.graph.core.plugin] Could not find category 'Replicator:Annotators' for removal
+2026-04-15T23:54:57Z [36,492ms] [Warning] [omni.graph.core.plugin] Could not find category 'Replicator:Annotators' for removal
+2026-04-15T23:54:57Z [36,492ms] [Warning] [omni.graph.core.plugin] Could not find category 'Replicator:Annotators' for removal
+2026-04-15T23:54:57Z [36,492ms] [Warning] [omni.graph.core.plugin] Could not find category 'Replicator:Annotators' for removal
+2026-04-15T23:54:57Z [36,492ms] [Warning] [omni.graph.core.plugin] Could not find category 'Replicator:Core' for removal
+2026-04-15T23:54:57Z [36,498ms] [Warning] [omni.physx.plugin] USD stage detach not called, holding a loose ptr to a stage!
+2026-04-15T23:54:58Z [36,602ms] [Warning] [carb] Client omni.syntheticdata.plugin Failed to acquire interface [omni::graph::core::INode v4.10] while unloading all plugins
+Windows fatal exception: access violation
 
-[Runner] Instruction: "lift the cube"
-[Runner] Running for 500 steps (action_repeat=5) …
-
-[Runner] Env action space: Box(-inf, inf, (1, 7), float32)
-[Runner] Action manager total dim: 7
-
-  [camera] frame=   1 mean=39.0  std=48.34  min=0  max=242
-  [camera] Saved first frame → openvla_frame_0.png
-  step     0 | reward +0.3527 | ee_pos=[0.4632 0.0001 0.3855] | raw_action=[-0.0231  0.0006 -0.0066  0.1187 -0.0333  0.0058  0.    ]
-  [camera] frame=   2 mean=39.1  std=48.44  min=0  max=242
-  [camera] frame=   3 mean=39.3  std=48.57  min=0  max=242
-2026-04-15T02:05:26Z [176,797ms] [Warning] [carb] Client gpu.foundation.plugin has acquired [gpu::unstable::IMemoryBudgetManagerFactory v0.1] 100 times. Consider accessing this interface with carb::getCachedInterface() (Performance warning)
-  step    50 | reward +0.0000 | ee_pos=[0.4547 0.0095 0.3832] | raw_action=[-0.0231  0.0006 -0.0066  0.1187 -0.0333  0.0058  0.    ]
+Current thread 0x0001ba7c (most recent call first):
+  <no Python frame>
+2026-04-15T23:54:59Z [0ms] [Warning] [carb.crashreporter-breakpad.plugin] [crash] A crash has occurred.  If a debugger should be attached, please set the '/crashreporter/debuggerAttachTimeoutMs' setting to a timeout in milliseconds.  This can be used to allow the crash reporter to wait for up to that long for a debugger to attach before processing or sending the crash report.
+2026-04-15T23:54:59Z [13ms] [Warning] [carb.crashreporter-breakpad.plugin] Launched process 'py-spy.exe' as PID 115080
+2026-04-15T23:55:00Z [1,196ms] [Error] [carb.crashreporter-breakpad.plugin] [crash] Wrote dump file 'c:/users/dhagm/school/me740/rproject/roboverse/.venv/lib/site-packages/isaacsim/kit/data/Kit/Isaac-Sim/5.1\bd89606b-d05b-411a-85d3-8c18c063b5f4.dmp'
+2026-04-15T23:55:00Z [1,198ms] [Warning] [carb.crashreporter-breakpad.plugin] [crash] preventing upload of minidump due to user opt-out: 'c:/users/dhagm/school/me740/rproject/roboverse/.venv/lib/site-packages/isaacsim/kit/data/Kit/Isaac-Sim/5.1\bd89606b-d05b-411a-85d3-8c18c063b5f4.dmp'
+2026-04-15T23:55:00Z [1,199ms] [Error] [carb.crashreporter-breakpad.plugin] [crash]     dump file size is 7606245 bytes, file is readable.
+2026-04-15T23:55:01Z [2,387ms] [Fatal] [carb.crashreporter-breakpad.plugin] [crash] Crash detected in pid 115216 thread 85052
+2026-04-15T23:55:01Z [2,388ms] [Warning] [carb.crashreporter-breakpad.plugin] [crash] Crash metadata:
+2026-04-15T23:55:01Z [2,389ms] [Warning] [carb.crashreporter-breakpad.plugin] [crash]  BuildGitlabJobID = '209507878'
+2026-04-15T23:55:01Z [2,390ms] [Warning] [carb.crashreporter-breakpad.plugin] [crash]  CarbSdkVersion = '206.6+release.9587.07f17b1b.gl'
+2026-04-15T23:55:01Z [2,390ms] [Warning] [carb.crashreporter-breakpad.plugin] [crash]  CrashTime = 'Wed Apr 15 23:55:00 2026 GMT'
+2026-04-15T23:55:01Z [2,391ms] [Warning] [carb.crashreporter-breakpad.plugin] [crash]  DriverShaderCacheWrapper = 'disabled'
+2026-04-15T23:55:01Z [2,392ms] [Warning] [carb.crashreporter-breakpad.plugin] [crash]  DumpId = 'bd89606b-d05b-411a-85d3-8c18c063b5f4'
+2026-04-15T23:55:01Z [2,393ms] [Warning] [carb.crashreporter-breakpad.plugin] [crash]  LastUploadStatus = '0'
+2026-04-15T23:55:01Z [2,394ms] [Warning] [carb.crashreporter-breakpad.plugin] [crash]  ProductName = 'OmniverseKit'
+2026-04-15T23:55:01Z [2,394ms] [Warning] [carb.crashreporter-breakpad.plugin] [crash]  PythonTracebackStatus = ''py-spy.exe' successfully wrote info to c:/users/dhagm/school/me740/rproject/roboverse/.venv/lib/site-packages/isaacsim/kit/data/Kit/Isaac-Sim/5.1/bd89606b-d05b-411a-85d3-8c18c063b5f4.py.txt'
