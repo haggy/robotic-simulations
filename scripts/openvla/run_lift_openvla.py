@@ -45,6 +45,23 @@ parser.add_argument(
     help="Repeat each OpenVLA action for this many env steps before querying again (default: 5). "
          "Reduces inference load: at 50 Hz policy rate, repeat=5 → ~10 Hz effective VLA rate.",
 )
+parser.add_argument(
+    "--temperature",
+    type=float,
+    default=0.0,
+    help="Sampling temperature for OpenVLA token generation. 0.0 = greedy (do_sample=False). "
+         "Values > 0 enable stochastic sampling (do_sample=True), which produces varied actions "
+         "when greedy decoding collapses to a constant output due to sim-to-real gap. "
+         "Recommended starting value: 0.5 (default: 0.0).",
+)
+parser.add_argument(
+    "--action_scale",
+    type=float,
+    default=1.0,
+    help="Multiply the arm delta (6-DoF) by this factor after clamping. Used to diagnose whether "
+         "the IK controller responds to the action at all — e.g. 100.0 amplifies sub-millimetre "
+         "raw actions to centimetre-scale commands. Gripper is not scaled. (default: 1.0)",
+)
 AppLauncher.add_app_launcher_args(parser)
 args_cli = parser.parse_args()
 
@@ -96,7 +113,6 @@ _MAX_TRANS = 0.05  # 5 cm
 _MAX_ROT = 0.2     # ~11 deg
 
 
-@torch.inference_mode()
 def query_openvla(
     env: ManagerBasedRLEnv,
     model,
@@ -104,6 +120,8 @@ def query_openvla(
     instruction: str,
     unnorm_key: str,
     camera_name: str = "camera",
+    temperature: float = 0.0,
+    action_scale: float = 1.0,
 ) -> torch.Tensor:
     """Query OpenVLA with the current camera frame and return an action tensor.
 
@@ -115,6 +133,9 @@ def query_openvla(
     instruction:   Natural-language command, e.g. "lift the cube".
     unnorm_key:    Dataset statistics key for action denormalization.
     camera_name:   Key used to look up the camera sensor in env.scene.
+    temperature:   Sampling temperature. 0.0 = greedy decoding. > 0 enables
+                   stochastic sampling, which breaks constant-output collapse
+                   caused by the sim-to-real gap in OpenVLA's visual encoder.
 
     Returns
     -------
@@ -125,23 +146,23 @@ def query_openvla(
     # 1. Grab RGB from env 0 only (OpenVLA is queried once; action is tiled).
     #    Camera output shape: (num_envs, H, W, 4) or (num_envs, H, W, 3).
     #    Dtype may be uint8 (0-255) or float32 (0-1) depending on Isaac Sim version.
+    #    NOTE: camera read is NOT inside torch.inference_mode() — the decorator was
+    #    removed to avoid any OmniGraph/CUDA tensor aliasing issues (see openvla#305).
     rgb_hwc = env.scene[camera_name].data.output["rgb"][0, ..., :3]  # (H, W, 3)
     rgb_np = rgb_hwc.cpu().numpy()
     if rgb_np.dtype != np.uint8:
         # float32 / float16 — scale to [0, 255] uint8 for PIL
         rgb_np = (rgb_np.clip(0.0, 1.0) * 255.0).astype(np.uint8)
 
-    # Diagnostic: print image stats so we can tell if the camera is frozen.
-    # A frozen camera will show constant mean/std across queries.
+    # Diagnostic: print image stats every query so we can verify the camera is live.
     if not hasattr(query_openvla, "_frame_count"):
         query_openvla._frame_count = 0
     query_openvla._frame_count += 1
-    if query_openvla._frame_count <= 3 or query_openvla._frame_count % 20 == 0:
-        print(
-            f"  [camera] frame={query_openvla._frame_count:4d} "
-            f"mean={rgb_np.mean():.1f}  std={rgb_np.std():.2f}  "
-            f"min={int(rgb_np.min())}  max={int(rgb_np.max())}"
-        )
+    print(
+        f"  [camera] frame={query_openvla._frame_count:4d} "
+        f"mean={rgb_np.mean():.2f}  std={rgb_np.std():.2f}  "
+        f"min={int(rgb_np.min())}  max={int(rgb_np.max())}"
+    )
     # Save the first frame to disk so you can inspect what OpenVLA is seeing.
     if query_openvla._frame_count == 1:
         save_path = "openvla_frame_0.png"
@@ -151,27 +172,37 @@ def query_openvla(
     pil_img = Image.fromarray(rgb_np).resize((256, 256))
 
     # 2. Run OpenVLA inference.
-    # Processor signature: __call__(text, images, ...) — text comes first.
-    # Only pixel_values should be bfloat16; input_ids / attention_mask must stay as Long.
+    # Match the reference call pattern exactly (openvla/openvla#305):
+    #   inputs = processor(prompt, img).to("cuda:0", dtype=torch.bfloat16)
+    # BatchFeature.to(dtype) only casts floating-point tensors (pixel_values →
+    # bfloat16) and leaves integer tensors (input_ids, attention_mask) as int64.
     device = next(model.parameters()).device
-    inputs = processor(instruction, pil_img, return_tensors="pt").to(device)
-    inputs["pixel_values"] = inputs["pixel_values"].to(dtype=torch.bfloat16)
-    raw_action = model.predict_action(**inputs, unnorm_key=unnorm_key, do_sample=False)
+    inputs = processor(instruction, pil_img).to(device, dtype=torch.bfloat16)
+    # Greedy decoding (temperature=0) collapses to a constant action when the
+    # model's visual encoder maps all sim images to the same feature vector
+    # (sim-to-real gap).  Stochastic sampling (temperature > 0) breaks this.
+    do_sample = temperature > 0.0
+    sample_kwargs = {"temperature": temperature} if do_sample else {}
+    with torch.no_grad():
+        raw_action = model.predict_action(
+            **inputs, unnorm_key=unnorm_key, do_sample=do_sample, **sample_kwargs
+        )
     # raw_action: np.ndarray (7,) — [dx, dy, dz, droll, dpitch, dyaw, gripper]
 
     # Free temporary inference tensors before env.step() needs VRAM for RTX rendering.
-    # Sequence matters: delete Python refs → collect Python GC → synchronize GPU →
-    # then flush the CUDA allocator cache.  Skipping synchronize() means the cache
-    # flush can race with still-running CUDA kernels and leave memory pinned.
     del inputs
     gc.collect()
     torch.cuda.synchronize()
     torch.cuda.empty_cache()
 
     # 3. Package into IsaacLab action tensor (num_envs, 7).
-    #    Clamp translations and rotations to prevent the physics from going unstable.
+    #    Clamp translations and rotations, then optionally scale for diagnostics.
+    #    Scale is applied AFTER the clamp so the clamp still prevents pre-scale
+    #    runaway; at default action_scale=1.0 behaviour is unchanged.
     raw_action[:3] = np.clip(raw_action[:3], -_MAX_TRANS, _MAX_TRANS)
     raw_action[3:6] = np.clip(raw_action[3:6], -_MAX_ROT, _MAX_ROT)
+    if action_scale != 1.0:
+        raw_action[:6] = raw_action[:6] * action_scale
 
     #    arm_action (6,) — delta EE pose, tiled across all envs.
     arm = torch.tensor(raw_action[:6], dtype=torch.float32, device=env.device)
@@ -207,8 +238,9 @@ def main() -> None:
 
     instruction = "pick up the red object"
     print(f'\n[Runner] Instruction: "{instruction}"')
+    sampling_mode = f"temperature={args_cli.temperature}" if args_cli.temperature > 0.0 else "greedy"
     print(f"[Runner] Running for {args_cli.num_steps} steps "
-          f"(action_repeat={args_cli.action_repeat}) …\n")
+          f"(action_repeat={args_cli.action_repeat}, sampling={sampling_mode}) …\n")
 
     print(f"[Runner] Env action space: {env.action_space}")
     print(f"[Runner] Action manager total dim: {env.action_manager.total_action_dim}\n")
@@ -228,6 +260,8 @@ def main() -> None:
                 env, model, processor,
                 instruction=instruction,
                 unnorm_key=args_cli.unnorm_key,
+                temperature=args_cli.temperature,
+                action_scale=args_cli.action_scale,
             )
             # Scale arm (6D) down; gripper (1D) is binary so leave it unscaled.
             delta_action = delta_action.clone()
@@ -239,8 +273,11 @@ def main() -> None:
         episode_reward += reward[0].item()
 
         if cached_action is None or step % args_cli.action_repeat == 0:
-            np.set_printoptions(precision=4, suppress=True)
-            # Read EE world position for unambiguous movement confirmation.
+            # Print with full 6-decimal precision so sub-millimetre action changes
+            # are visible.  If raw_action is EXACTLY identical across queries the
+            # model is outputting the same token sequence for every image (sim-to-real
+            # gap) rather than there being a code bug.
+            np.set_printoptions(precision=6, suppress=True)
             ee_pos = env.scene["ee_frame"].data.target_pos_w[0, 0].cpu().numpy()  # (3,)
             print(
                 f"  step {step:5d} | reward {reward[0].item():+.4f} | "
