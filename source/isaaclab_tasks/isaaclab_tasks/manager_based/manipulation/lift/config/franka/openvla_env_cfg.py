@@ -17,6 +17,8 @@ from isaaclab.sim.spawners.from_files.from_files_cfg import UsdFileCfg
 from isaaclab.utils import configclass
 from isaaclab.utils.assets import ISAAC_NUCLEUS_DIR
 
+from isaaclab.envs.common import ViewerCfg
+
 from . import ik_rel_env_cfg
 
 
@@ -30,6 +32,13 @@ class FrankaCubeLiftOpenVLAEnvCfg(ik_rel_env_cfg.FrankaCubeLiftEnvCfg):
 
     def __post_init__(self):
         super().__post_init__()
+
+        # Position the UI viewport camera close to the robot so the workspace is
+        # immediately visible on launch instead of the default (7.5, 7.5, 7.5).
+        self.viewer = ViewerCfg(
+            eye=(1.5, -1.5, 1.5),    # front-right-above the table
+            lookat=(0.5, 0.0, 0.3),  # centre of the robot workspace
+        )
 
         # Silence observation noise during VLA inference.
         self.observations.policy.enable_corruption = False
