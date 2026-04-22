@@ -88,3 +88,16 @@ gym.register(
     },
     disable_env_checker=True,
 )
+
+##
+# OpenVLA-OFT - IK-Relative with table camera (action chunking, L1 regression head)
+##
+
+gym.register(
+    id="Isaac-Lift-Cube-Franka-OpenVLA-OFT-v0",
+    entry_point="isaaclab.envs:ManagerBasedRLEnv",
+    kwargs={
+        "env_cfg_entry_point": f"{__name__}.openvla_oft_env_cfg:FrankaCubeLiftOpenVLAOFTEnvCfg",
+    },
+    disable_env_checker=True,
+)
