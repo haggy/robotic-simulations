@@ -3,4 +3,6 @@ isaaclab.bat -p scripts/reinforcement_learning/rsl_rl/train.py --task=Isaac-Velo
 isaaclab.bat -p scripts/reinforcement_learning/rsl_rl/train.py --task=Isaac-Lift-Cube-Franka-v0 --num_envs=10
 
 
+isaaclab.bat -p scripts/reinforcement_learning/rsl_rl/train.py --task=Isaac-Ant-v0 --num_envs=10
+
 isaaclab.bat -p scripts/openvla/run_lift_openvla.py --num_envs 1  --num_steps 500  --enable_cameras
